@@ -819,9 +819,11 @@ void * search(void * args)
 	Chrom *parent1, *parent2, child;
 	Chrom elite_chrom;
 	char buffer[256];
+#ifdef PGAMODE
 	// print configuration
 	if (myrank == 0) 
 		print_config();
+#endif
 	// initialize random number generator
 	if (debug) {
 		global_seed = 0;

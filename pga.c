@@ -105,10 +105,10 @@ int send_emi()
 {
 	int i;
 	// try to fix MPI_ERR_BUFFER. 
-	int j;
-	for (j=1; j<neighbor_count; j++) {
-		memcpy(emi_buffer + j * emi_buffer_size, emi_buffer, emi_buffer_size);
-	}
+	//int j;
+	//for (j=1; j<neighbor_count; j++) {
+	//	memcpy(emi_buffer + j * emi_buffer_size, emi_buffer, emi_buffer_size);
+	//}
 	// end try
 	// send solutions to neighbors
 	for (i=1; i<=neighbor_count; i++) {
@@ -116,7 +116,8 @@ int send_emi()
 		fprintf(myout, "ss%d->%d: %d %d \n", myrank, neighbor[i], send_seq, sndreq_index);
 		fflush(myout);
 #endif 
-		mpi_rcode = MPI_Ibsend(emi_buffer + (i-1) * emi_buffer_size, emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &sndreq_list[sndreq_index]);
+		//mpi_rcode = MPI_Ibsend(emi_buffer + (i-1) * emi_buffer_size, emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &sndreq_list[sndreq_index]);
+		mpi_rcode = MPI_Ibsend(emi_buffer, emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &sndreq_list[sndreq_index]);
 		if (mpi_rcode != MPI_SUCCESS) {
 			fprintf(stderr, ">>>%d: wrong MPI_Ibsend to %d, return=%d\n", myrank, neighbor[i], mpi_rcode);
 			fflush(stderr);
@@ -151,7 +152,8 @@ int send_emi()
 		emi_buffer = emi_queue;
 	} else {
 		// next emi uses the next emi_buffer
-		emi_buffer += emi_buffer_size * neighbor_count;
+		//emi_buffer += emi_buffer_size * neighbor_count;
+		emi_buffer += emi_buffer_size;
 	}
 #ifdef DEBUG_COMM
 	fprintf(myout, "s: %d %d %d\n", myrank, send_seq, sndreq_index);
@@ -325,7 +327,8 @@ void psearch()
 	emi_size = 2;
 	// snd_parallelism is set at command line or using default value
 	emi_buffer_size = emi_size * mig_msglen * sizeof(int);
-	emi_queue_size = snd_parallelism * emi_buffer_size * neighbor_count;
+	//emi_queue_size = snd_parallelism * emi_buffer_size * neighbor_count;
+	emi_queue_size = snd_parallelism * emi_buffer_size;
 	emi_queue = (int *)malloc(emi_queue_size);
 	emi_buffer = emi_queue; // first export data
 	memset(emi_queue, 0, emi_queue_size);
@@ -359,7 +362,10 @@ void psearch()
 	int mpi_buffer_size;
 	MPI_Pack_size (neighbor_count*emi_size*mig_msglen*snd_parallelism, MPI_INT, topoComm, &mpi_buffer_size);
 	mpi_buffer_size += (neighbor_count*snd_parallelism*MPI_BSEND_OVERHEAD);
-	int *mpi_buffer = (int *)malloc(mpi_buffer_size);
+// constant as the multiplier of basic outgoing message buffer size.
+// useful when there are more MPI processes than number of cores on a node
+#define MY_MPI_SNDBUF_FACTOR 9
+	int *mpi_buffer = (int *)malloc(mpi_buffer_size * MY_MPI_SNDBUF_FACTOR);
 	if (mpi_buffer == NULL) {
 		fprintf(myout, "ERROR: could not malloc %d bytes of memory\n", mpi_buffer_size);
 		fflush(myout);
