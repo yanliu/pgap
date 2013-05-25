@@ -110,10 +110,6 @@ int send_emi()
 		memcpy(emi_buffer + j * emi_buffer_size, emi_buffer, emi_buffer_size);
 	}
 	// end try
-#ifdef DEBUG_COMM
-	extern long long iterations;
-	fprintf(myout, "export@%lld: sndreq_index=%d\n", iterations, sndreq_index);
-#endif
 	// send solutions to neighbors
 	for (i=1; i<=neighbor_count; i++) {
 #ifdef DEBUG_COMM
