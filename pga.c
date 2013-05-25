@@ -363,7 +363,8 @@ void psearch()
 	MPI_Pack_size (neighbor_count*emi_size*mig_msglen*snd_parallelism, MPI_INT, topoComm, &mpi_buffer_size);
 	mpi_buffer_size += (neighbor_count*snd_parallelism*MPI_BSEND_OVERHEAD);
 // constant as the multiplier of basic outgoing message buffer size.
-// useful when there are more MPI processes than number of cores on a node
+// useful when there are more MPI processes than number of cores on a node.
+// don't know the right value yet. But it seems must be at least 2
 #define MY_MPI_SNDBUF_FACTOR 9
 	int *mpi_buffer = (int *)malloc(mpi_buffer_size * MY_MPI_SNDBUF_FACTOR);
 	if (mpi_buffer == NULL) {
