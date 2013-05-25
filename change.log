@@ -1,0 +1,8 @@
+[20100531] added pure random sequence lookup for feasibility and quality improvement operators
+
+[20090803] removed requirement for gsl lib. added compile switch 'SPRNG' to use sprng only
+
+[20090713] on TACC, we got mpi user buffer overflow problem. i changed ga-asyn.c and ga.h to have recv_imi() frequency 2 times faster than send_emi()
+
+[20090623] corrected sprng initialization: if using MPI, all processes must use the same seed (make_sprng_seed() will do this for me)
+

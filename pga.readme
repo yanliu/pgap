@@ -1,0 +1,63 @@
+[] requirement for communication
+send and recv should not be paired. either one-side comm or buffered send-recv.
+
+[] async or sync
+m-w: synchronize: to represent or arrange (events) to indicate coincidence or coexistence
+In communication: async and sync differ in whether message transmission is coordinated by clock signals. sync uses clock; async does not but uses special bits to indicate start and end of a transmission
+sync means sender and receiver must pair the communication. async means a send can complete without the recv being posted and starting to receive data
+
+[] blocking or non-blocking
+blocking/non-blocking has nothing to do with the other end. a blocking operation(send/recv) does not return until finished. send/recv calls system calls. blocking means app must wait for system call is finished, non-blocking does not.
+
+[] does blocking means sync?
+no, of course
+
+[] emigration
+- filling emigration buffer
+  my ga is a steady-state ga which generates one offspring at a time. ranking mechanism can keep track of good-quality solutions. migration could be steady-state migration, too: each migration only emigrate one or two individuals. which chroms to be emigrated? good but non-duplicate ones. at first, we need more feasible solutions, so good means unfitness value is low. at a point, good turns to unfitness and fitness values both. when to filling emi buffer? when it is needed.
+- buffer size and iterations
+  buffer is a stack whose top always has better quality. buffer size relies on migration frequency. longer interval means larger buffer.
+- granuality of basic emigrate tribe: 2: elite and one selected using binary tournament.
+
+[] immigration
+- poll from neighbors about immigrants
+  Since we use asynchronous comm, we can only check if some neighbor sends in immigrants. We need an adaptive algo to process immigrants from 0-K neighbors.
+- evaluate them
+- select them for settlement
+- diffusion of good genes: implicit. we do not forward an immigrant if it is good. If it is good, it will survive in local pop and eventually be sent to emigrate.
+
+[] interaction
+- set an indicator to tell neighbors how current evolving is going, so that others can emigrate appropriate individuals to help. The underlying overlay could also change due to the distribution of such indicator.
+
+[] stopping rule
+- for performance evaluation, stopping rule is a designated quality of solution. Once reached, all processors quit
+- for normal operation, all without improvement in 500000 iterations? it is a stronger rule than sequential algo.
+
+[] pthread/multicore on mpi on TG
+- use sched_yield() on single cpu
+- mpi has thread support level. MPI_THREAD_FUNNELED is suitable for gappga, but on TG, only MPI_THREAD_SINGLE is supported. Tested with it, it seems child thread could still run. More work need to be done on prioritizing computing thread
+- googling found that mpi-gm lib might crash if malloc() in child thread. test showed that it worked okey. maybe have been fixed.
+- condition to use pthread in pga: MPI_THREAD_FUNNELED && PGA_THREAD_MODE. MPI_THREAD_FUNNELED can be determined by separate program. PGA_THREAD_MODE is a C precompiler declarative. PGA_THREAD_MODE is 1 if caller knows at least 2 cpus will be available, e.g., on mercury, MPI's machinefile has distinguished node names.
+
+[] pga modes
+- 1: blocking/non-blocking: MPI_Send()/Recv() vs MPI_ISend()/IRecv()
+- 2: nobuffer/buffered: MPI_Buffer_attach()
+- 3: no-thread/thread: pthread or not
+- 4: sync/async: MPI_Send() and Recv(); MPI_Wait() vs MPI_Test()
+-TODO: above are MPI stuff, what are my measures?
+
+[] speedup test cases:
+- NP on mercury (<512): 1 16/4 64/8 144/12 256/16 400/20 484/22
+- NP (<1024): 1 16 64 144 256 400 576/24 784/28 1024/32
+
+[] treat immigrants
+- strategies: can treat them as new offspring, simple; or one parent: a) must improve feasibility first because it might be a randomly-picked one; b) must check w/ elite, if better, no need for crossover/mutate, just put it in as new offspring
+- rule 2: treat them separately, not all together
+
+[] performance test: diffusion of chroms and trace of opt progress
+- changed output to put more information in it
+- change message format to include a chromosome's origin in order to evaluate how a chromosome is propagated
+- calc distance b/w a chrom receiver and its origin
+- trace: if an immigrant is kept as remote elite, we put it in a small-size buffer its solution quality and origin; at emigrate time, we check emigrant's solution quality against history and find its origin. Two different chroms may have the same soln quality and from different origin, but it's rare.
+
+[] an important consideration of comm: what to emigrate when there is few new improves at later stage of evolution?
