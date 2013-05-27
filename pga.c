@@ -190,7 +190,10 @@ int recv_imi()
 		fflush(myout);
 #endif
 		// fill into immigrant pool
-		fill_imi();
+		if (!fill_imi()) {
+			fprintf(myout, "Err:recv_imi@%d: type=%d from=%d seq=%d\n", myrank, *imi_temp,  *(imi_temp+1), *(imi_temp+2));
+			fflush(myout);
+		}
 
 		received ++;
 		// check remaining messages
@@ -206,12 +209,10 @@ int recv_imi()
 	return received;
 }
 // copy received immigrant to immigrant pool
-void fill_imi()
+int fill_imi()
 {
-	if (*imi_temp == 0) {
-		fprintf(stderr, ">>>%d: recv msg error\n", myrank);
-		fflush(stderr);
-		return;
+	if (*imi_temp != MIG_ELITE && *imi_temp != MIG_RANDOM) {
+		return 0;
 	}
 	// it's going to override in a forced way
 	if (imi_chrom_index[imi_buffer_head] >= 0)
@@ -221,6 +222,7 @@ void fill_imi()
 	imi_chrom_index[imi_buffer_head] = 0;	
 	// debug
 	//if (debug) printq('+', *imi_temp);
+	return 1;
 }
 
 // fetch immigrant to be processed by immigrate() 

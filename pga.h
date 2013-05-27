@@ -9,7 +9,7 @@
 //void create_mpi_chrom_type(Chrom chrom, MPI_Datatype *t);
 int send_emi();
 int recv_imi();
-void fill_imi();
+int fill_imi();
 int fetch_imi(int *buffer, int *origin);
 void psearch(void);
 int get_best_dim(int np, int *rowSize, int *colSize);
