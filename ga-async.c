@@ -743,7 +743,7 @@ int emigrate(int newimprove, int noimprove)
 		// will always return -1
 		origin = imi_find_origin(population[rank[EV_FITV][i]].ev[EV_FITV]);
 		*emi_index = (origin==-1)?myrank:origin; emi_index++; // origin rank
-	*emi_index = send_seq; emi_index++; // send sequence number
+		*emi_index = send_seq; emi_index++; // send sequence number
 		//TODO: choose 2 elites w/ larger diversity difference
 		if (population[rank[EV_UFITV][i]].ev[EV_UFITV] > 0) {
 			// no feasible solutions, fill least unfeasible ones
@@ -765,7 +765,7 @@ int emigrate(int newimprove, int noimprove)
 		binary_tournament(&p1, &p2);
 		*emi_index = MIG_RANDOM; emi_index++; // chrom type
 		*emi_index = myrank; emi_index++; // origin rank
-	*emi_index = send_seq; emi_index++; // send sequence number
+		*emi_index = send_seq; emi_index++; // send sequence number
 		for (j=0; j<n; j++) {
 			*emi_index = population[p1].solution[j];
 			emi_index ++;
@@ -819,11 +819,6 @@ void * search(void * args)
 	Chrom *parent1, *parent2, child;
 	Chrom elite_chrom;
 	char buffer[256];
-#ifdef PGAMODE
-	// print configuration
-	if (myrank == 0) 
-		print_config();
-#endif
 	// initialize random number generator
 	if (debug) {
 		global_seed = 0;
@@ -835,6 +830,11 @@ void * search(void * args)
 			global_seed = (int) (get_ga_time() + getpid());
 #endif
 	}
+#ifdef PGAMODE
+	// print configuration
+	if (myrank == 0) 
+		print_config();
+#endif
 #ifdef GSL_SPRNG
 #ifdef PGAMODE
 	//MPI_Comm_rank( MPI_COMM_WORLD, &myrank );

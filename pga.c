@@ -293,16 +293,15 @@ void psearch()
 	for (i=0; i<degree0+rn+1; i++)
 		neighbor[i] = -1;
 	neighbor[0] = myrank; // myself
-	neighbor_count = 1;
+	neighbor_count = 0;
 	for (i=0; i<degree0; i++) {
 		if (neighbor_probe[i] >= 0 && neighbor_probe[i] != globalRank ) {
 			if ( (i % 2 == 0) || ((i % 2 == 1) && (neighbor_probe[i] != neighbor_probe[i-1]))) {
-				neighbor[neighbor_count] = neighbor_probe[i];
+				neighbor[neighbor_count + 1] = neighbor_probe[i];
 				neighbor_count ++;
 			}
 		}
 	}
-	neighbor_count --;
 	//TODO: add remote neighbor to the list 
 
 /*
@@ -330,6 +329,11 @@ void psearch()
 	//emi_queue_size = snd_parallelism * emi_buffer_size * neighbor_count;
 	emi_queue_size = snd_parallelism * emi_buffer_size;
 	emi_queue = (int *)malloc(emi_queue_size);
+	if (emi_queue == NULL) {
+		fprintf(myout, "ERROR: could not malloc %d bytes of memory for emi_queue\n", emi_queue_size);
+		fflush(myout);
+		exit(1);
+	}
 	emi_buffer = emi_queue; // first export data
 	memset(emi_queue, 0, emi_queue_size);
 	sndreq_size = neighbor_count * snd_parallelism;
@@ -378,7 +382,7 @@ void psearch()
 		fflush(myout);
 	}
 #endif
-	MPI_Buffer_attach(mpi_buffer, mpi_buffer_size + MPI_BSEND_OVERHEAD);
+	MPI_Buffer_attach(mpi_buffer, mpi_buffer_size);
 
 
 	// performance study: init history buffers
@@ -430,7 +434,8 @@ void psearch()
 
 	// free resources
 	free(neighbor);
-	free(emi_buffer); 
+	//free(emi_buffer); 
+	free(emi_queue); 
 	for (i=0; i<imi_size; i++) {
 		free(imi_buffer[i]);
 	}
