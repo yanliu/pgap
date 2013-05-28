@@ -313,13 +313,6 @@ void psearch()
 	MPI_Group_incl(topoGroup, neighbor_count+1, neighbor, &migGroup);
 	MPI_Comm_create(topoComm, migGroup, &migComm); 
 */
-#ifdef DEBUG_COMM
-	fprintf(myout, "topo: ");
-	for (i=0; i<neighbor_count+1; i++)
-		fprintf(myout, "%d ", neighbor[i]);
-	fprintf(myout, "\n");
-	fflush(myout);
-#endif
 	// set global id
 	globalId = (IDTYPE) myrank;
 
@@ -366,30 +359,44 @@ void psearch()
 	// provide our own outgoing message buffer for MPI to use. This is
 	// because we know problem size and the buffer size needed better
 	int mpi_buffer_size;
-	MPI_Pack_size (neighbor_count*emi_size*mig_msglen*snd_parallelism, MPI_INT, topoComm, &mpi_buffer_size);
-	mpi_buffer_size += (neighbor_count*snd_parallelism*MPI_BSEND_OVERHEAD);
+	MPI_Pack_size (snd_parallelism*neighbor_count*emi_size*mig_msglen, MPI_INT, topoComm, &mpi_buffer_size);
+	mpi_buffer_size += (snd_parallelism*neighbor_count*MPI_BSEND_OVERHEAD);
 // constant as the multiplier of basic outgoing message buffer size.
 // useful when there are more MPI processes than number of cores on a node.
 // don't know the right value yet. But it seems must be at least 2
 #define MY_MPI_SNDBUF_FACTOR 9
-	int *mpi_buffer = (int *)malloc(mpi_buffer_size * MY_MPI_SNDBUF_FACTOR);
+	mpi_buffer_size *= MY_MPI_SNDBUF_FACTOR;
+	int *mpi_buffer = (int *)malloc(mpi_buffer_size);
 	if (mpi_buffer == NULL) {
 		fprintf(myout, "ERROR: could not malloc %d bytes of memory\n", mpi_buffer_size);
 		fflush(myout);
 		exit(1);
 	}
-#ifdef DEBUG_COMM
-	if (myrank == 0) {
-		fprintf(myout, "MPI outgoing message buffer size is set to hold %dx%d Ibsends, each size %dx%dx4 + MPI_BSEND_OVERHEAD(%d) bytes: %d\n", neighbor_count, snd_parallelism, emi_size, mig_msglen, MPI_BSEND_OVERHEAD, mpi_buffer_size);
-		fflush(myout);
-	}
-#endif
 	MPI_Buffer_attach(mpi_buffer, mpi_buffer_size);
 
 
 	// performance study: init history buffers
 	memset(imi_hist_chrom, 0, sizeof(long long) * IMI_HIST_BUFFER_SIZE);
 	memset(imi_hist_origin, 0, sizeof(int) * IMI_HIST_BUFFER_SIZE);
+
+	// print out pga configuration
+	fprintf(myout, ">>>[pga_config]: neighbor_count=%d\n ", neighbor_count);
+	fprintf(myout, ">>>[pga_config]: topo=");
+	for (i=0; i<neighbor_count+1; i++)
+		fprintf(myout, "%d ", neighbor[i]);
+	fprintf(myout, "\n");
+	fprintf(myout, ">>>[pga_config]: emi_size=%d solutions\n", emi_size);
+	fprintf(myout, ">>>[pga_config]: mig_msglen=%d solution variables\n", mig_msglen);
+	fprintf(myout, ">>>[pga_config]: emi_buffer_size=%d bytes\n", emi_buffer_size);
+	fprintf(myout, ">>>[pga_config]: snd_parallelism=%d export buffers\n", snd_parallelism);
+	fprintf(myout, ">>>[pga_config]: emi_queue_size=%d bytes\n", emi_queue_size);
+	fprintf(myout, ">>>[pga_config]: sndreq_size=%d Ibsends\n", sndreq_size);
+	fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size=%d bytes (%dx%dx(%dx%dx%d+%d)x%d)\n", mpi_buffer_size, neighbor_count, snd_parallelism, emi_size, mig_msglen, (int)sizeof(int), MPI_BSEND_OVERHEAD, MY_MPI_SNDBUF_FACTOR);
+	fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size multiplier=%d \n", MY_MPI_SNDBUF_FACTOR);
+	fprintf(myout, ">>>[pga_config]: IMI_BUFFER_CAP=%d imports\n", IMI_BUFFER_CAP);
+	fprintf(myout, ">>>[pga_config]: imi_size=%d single-neighbor imports\n", imi_size);
+	fprintf(myout, ">>>[pga_config]: IMI_HIST_BUFFER_SIZE=%d solutions\n", IMI_HIST_BUFFER_SIZE);
+	fflush(myout);
 
 	// start of PGA
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -443,6 +450,9 @@ void psearch()
 	}
 	free(imi_buffer);
 	free(imi_chrom_index);
+	int actual_freed_size;
+	MPI_Buffer_detach(mpi_buffer, &actual_freed_size);
+	free(mpi_buffer);
 }
 // find the rectangle size closest to the square root of np
 int get_best_dim(int np, int *rowSize, int *colSize)
