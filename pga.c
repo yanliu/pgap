@@ -191,7 +191,7 @@ int recv_imi()
 #endif
 		// fill into immigrant pool
 		if (!fill_imi()) {
-			fprintf(myout, "Err:recv_imi@%d: type=%d from=%d seq=%d\n", myrank, *imi_temp,  *(imi_temp+1), *(imi_temp+2));
+			fprintf(myout, ">>>%d: Err type=%d from=%d seq=%d\n", myrank, *imi_temp,  *(imi_temp+1), *(imi_temp+2));
 			fflush(myout);
 		}
 
