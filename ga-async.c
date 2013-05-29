@@ -823,7 +823,7 @@ void * search(void * args)
 	if (debug) {
 		global_seed = 0;
 	} else {
-#ifndef PGAMODE
+#ifdef PGAMODE
 		global_seed = 0; // required by SPRNG
 #else
 		if (global_seed < 0) // not set by command line
