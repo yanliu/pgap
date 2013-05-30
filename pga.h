@@ -17,6 +17,7 @@ int imi_find_origin(long long fitv);
 
 extern int pop_size;
 extern int ga_done; // indicate if ga search() is done
+extern long long iterations;
 extern IDTYPE globalId;
 extern FILE * myout;
 // performance study: immigrant history buffer

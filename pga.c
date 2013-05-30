@@ -165,7 +165,7 @@ int send_emi()
 // receive immigrants
 int recv_imi()
 {
-	int received = 0, count;
+	int received = 0, countb, counts;
 	//MPI_Comm_rank(topoComm, &myrank);
 	MPI_Status status;
 	int flag;
@@ -174,8 +174,14 @@ int recv_imi()
 		fprintf(stderr, ">>>%d: wrong MPI_Iprobe, return=%d\n", myrank, mpi_rcode);
 		fflush(stderr);
 	}
-	MPI_Get_count(&status, MPI_INT, &count);
-	count = count / (emi_size * mig_msglen);
+	MPI_Get_count(&status, MPI_INT, &countb);
+	counts = countb / (emi_size * mig_msglen);
+#ifdef DEBUG_COMM
+	if (counts * emi_size * mig_msglen != countb) {
+		fprintf(myout, "rc[%lld]: %d: %d int in, %d solns and ...", iterations, myrank, countb, counts);
+	}
+	fflush(myout);
+#endif
 	while (flag) {
 		// recv
 		// imi_temp is a global variable for message sharing b/w recv_imi() and fill_imi()
@@ -186,7 +192,7 @@ int recv_imi()
 		}
 #ifdef DEBUG_COMM
 		// r: myrank sender sequence
-		fprintf(myout, "r: %d %d %d\n", myrank, *(imi_temp+1), *(imi_temp+2));
+		fprintf(myout, "rr: %d %d %d\n", myrank, *(imi_temp+1), *(imi_temp+2));
 		fflush(myout);
 #endif
 		// fill into immigrant pool
@@ -198,14 +204,20 @@ int recv_imi()
 		received ++;
 		// check remaining messages
 		MPI_Iprobe(MPI_ANY_SOURCE, 999, topoComm, &flag, &status);
-		MPI_Get_count(&status, MPI_INT, &count);
-		count = count / (emi_size * mig_msglen);
+		MPI_Get_count(&status, MPI_INT, &countb);
+		counts = countb / (emi_size * mig_msglen);
+#ifdef DEBUG_COMM
+		if (counts * emi_size * mig_msglen != countb) {
+			fprintf(myout, "rc[%lld]: %d: %d int in, %d solns and ...", iterations, myrank, countb, counts);
+		}
+		fflush(myout);
+#endif
 	}
 	recv_round ++;
-	if (pdebug) {
-		fprintf(stdout, ">>>%d: recv round %d accepted %d immigrants\n", myrank, recv_round, received);
-		fflush(stdout);
-	}
+#ifdef DEBUG_COMM
+	fprintf(myout, "r: %d round %d got %d solns\n", myrank, recv_round, received);
+	fflush(myout);
+#endif
 	return received;
 }
 // copy received immigrant to immigrant pool
@@ -324,13 +336,13 @@ void psearch()
 	//emi_queue_size = snd_parallelism * emi_buffer_size * neighbor_count;
 	emi_queue_size = snd_parallelism * emi_buffer_size;
 	emi_queue = (int *)malloc(emi_queue_size);
+	memset(emi_queue, 0, emi_queue_size);
 	if (emi_queue == NULL) {
 		fprintf(myout, "ERROR: could not malloc %d bytes of memory for emi_queue\n", emi_queue_size);
 		fflush(myout);
 		exit(1);
 	}
 	emi_buffer = emi_queue; // first export data
-	memset(emi_queue, 0, emi_queue_size);
 	sndreq_size = neighbor_count * snd_parallelism;
 	sndreq_list = (MPI_Request *)malloc(sizeof(MPI_Request) * sndreq_size);
 	sndreq_status_list = (MPI_Status *)malloc(sizeof(MPI_Status) * sndreq_size);
@@ -364,7 +376,7 @@ void psearch()
 // constant as the multiplier of basic outgoing message buffer size.
 // useful when there are more MPI processes than number of cores on a node.
 // don't know the right value yet. But it seems must be at least 2
-#define MY_MPI_SNDBUF_FACTOR 9
+#define MY_MPI_SNDBUF_FACTOR 100
 	mpi_buffer_size *= MY_MPI_SNDBUF_FACTOR;
 	int *mpi_buffer = (int *)malloc(mpi_buffer_size);
 	if (mpi_buffer == NULL) {
@@ -380,7 +392,7 @@ void psearch()
 	memset(imi_hist_origin, 0, sizeof(int) * IMI_HIST_BUFFER_SIZE);
 
 	// print out pga configuration
-	fprintf(myout, ">>>[pga_config]: neighbor_count=%d\n ", neighbor_count);
+	fprintf(myout, ">>>[pga_config]: neighbor_count=%d\n", neighbor_count);
 	fprintf(myout, ">>>[pga_config]: topo=");
 	for (i=0; i<neighbor_count+1; i++)
 		fprintf(myout, "%d ", neighbor[i]);
