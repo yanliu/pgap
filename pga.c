@@ -18,7 +18,6 @@ int immigrate_freq=25; // import interval as number of iter b/w two imports
 int mig_msglen = 0; // a msg's lenth as number of integers, set in psearch() 
 
 // emigration buffer. size: emi_size * n
-int *emi_buffer=NULL; // linear array for MPI data transfer
 int emi_buffer_size=0; // in bytes
 int emi_size=2; // number of solutions to export. command line param
 // snd_parallelism: we count the sending of one emigrated data to all neighbors
@@ -35,7 +34,8 @@ int snd_parallelism = 5; // default value. command line parameter
 // Ibsend and emigrate() will access the same buffer. Since in one emi, sends
 // to all neighbors share the same emi buffer, the size of emi_queue is then
 // (snd_parallelism * emi_buffer_size)
-int *emi_queue = NULL;
+int **emi_queue = NULL;
+int emi_queue_index = 0;
 int emi_queue_size = 0; // in bytes, must be multiple of emi_buffer_size
 // remember all Ibsend requests
 MPI_Request *sndreq_list = NULL;
@@ -100,14 +100,33 @@ long long imi_hist_chrom[IMI_HIST_BUFFER_SIZE]; // chrom buffer
 int imi_hist_origin[IMI_HIST_BUFFER_SIZE]; // chrom origin
 int imi_hist_index = 0; // a loop-around index
 
-// send emigrants
+// check to see an export is possible. if yes, return emi_buffer
+// it's not if send queue is full and not complete.
+// TODO: a receiver might not get turn to receive if multi processes run on
+// a single node. In this case, we skip. But might be better if we can use
+// MPI_Testsome() to allow delayed receive from some procs. But that will
+// complicate the sending queue policy.
+int * send_req() {
+	if (sndreq_index < sndreq_size) return emi_queue[emi_queue_index]; // queue has space
+	int flag;
+	// we shall NEVER use MPI_Waitall(). In isend, it can cause deadlock.
+	mpi_rcode = MPI_Testall(sndreq_size, sndreq_list, &flag, sndreq_status_list);
+	if (flag) {
+		sndreq_index = 0;
+		emi_queue_index = 0;
+		return emi_queue[emi_queue_index];
+	}
+	return NULL;
+}
+
+// send emigrants. must be paired with send_check()
 int send_emi()
 {
 	int i;
 	// try to fix MPI_ERR_BUFFER. 
 	//int j;
 	//for (j=1; j<neighbor_count; j++) {
-	//	memcpy(emi_buffer + j * emi_buffer_size, emi_buffer, emi_buffer_size);
+	//	memcpy(emi_queue[emi_queue_index + j], emi_buffer, emi_buffer_size);
 	//}
 	// end try
 	// send solutions to neighbors
@@ -116,15 +135,21 @@ int send_emi()
 		fprintf(myout, "ss%d->%d: %d %d \n", myrank, neighbor[i], send_seq, sndreq_index);
 		fflush(myout);
 #endif 
-		//mpi_rcode = MPI_Ibsend(emi_buffer + (i-1) * emi_buffer_size, emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &sndreq_list[sndreq_index]);
-		mpi_rcode = MPI_Ibsend(emi_buffer, emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &sndreq_list[sndreq_index]);
+#ifdef PGA_USE_IBSEND
+		mpi_rcode = MPI_Ibsend(emi_queue[emi_queue_index], emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &(sndreq_list[sndreq_index]));
+#else
+		mpi_rcode = MPI_Isend(emi_queue[emi_queue_index], emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &(sndreq_list[sndreq_index]));
+#endif
+		//mpi_rcode = MPI_Ibsend(emi_queue[emi_queue_index + i - 1], emi_size*mig_msglen, MPI_INT, neighbor[i], 999, topoComm, &(sndreq_list[sndreq_index]));
 		if (mpi_rcode != MPI_SUCCESS) {
 			fprintf(stderr, ">>>%d: wrong MPI_Ibsend to %d, return=%d\n", myrank, neighbor[i], mpi_rcode);
 			fflush(stderr);
 		}
-		sndreq_index ++;
+		sndreq_index = sndreq_index + 1;
 	}
+	emi_queue_index = emi_queue_index + 1;
 	send_round ++;
+/* using MPI_Waitall() is  deprecated 
 	// throttle control: sync prev Ibsends if buffer use is full
 	if (sndreq_index >= sndreq_size) {
 		// wait for all to finish
@@ -133,7 +158,7 @@ int send_emi()
 		mpi_rcode = MPI_Waitall(sndreq_size, sndreq_list, sndreq_status_list);
 		t2 = get_ga_time();
 #ifdef DEBUG_COMM
-		fprintf(myout, "w: %d %d %.6lf - %.6lf\n", myrank, send_seq, t1, t2);
+		fprintf(myout, "w: %d %d %.6lf - %.6lf %d/%d\n", myrank, send_seq, t1, t2, sndreq_index, sndreq_size);
 		for (i=0; i<sndreq_size; i++) {
 			fprintf(myout, "%d ", sndreq_status_list[i].MPI_ERROR);
 		}
@@ -149,12 +174,14 @@ int send_emi()
 			fflush(stdout);
 		}
 		sndreq_index = 0;
-		emi_buffer = emi_queue;
+		emi_queue_index = 0;
 	} else {
 		// next emi uses the next emi_buffer
-		//emi_buffer += emi_buffer_size * neighbor_count;
-		emi_buffer += emi_buffer_size;
+		emi_queue_index ++;
+		//emi_queue_index += neighbor_count ;
 	}
+	emi_buffer = emi_queue[emi_queue_index];
+*/
 #ifdef DEBUG_COMM
 	fprintf(myout, "s: %d %d %d\n", myrank, send_seq, sndreq_index);
 	fflush(myout);
@@ -333,23 +360,26 @@ void psearch()
 	emi_size = 2;
 	// snd_parallelism is set at command line or using default value
 	emi_buffer_size = emi_size * mig_msglen * sizeof(int);
-	//emi_queue_size = snd_parallelism * emi_buffer_size * neighbor_count;
-	emi_queue_size = snd_parallelism * emi_buffer_size;
-	emi_queue = (int *)malloc(emi_queue_size);
-	memset(emi_queue, 0, emi_queue_size);
-	if (emi_queue == NULL) {
-		fprintf(myout, "ERROR: could not malloc %d bytes of memory for emi_queue\n", emi_queue_size);
-		fflush(myout);
-		exit(1);
+	emi_queue_size = snd_parallelism;
+	//emi_queue_size = snd_parallelism * neighbor_count;
+	emi_queue = (int **)malloc(emi_queue_size * sizeof(int *));
+	emi_queue_index = 0;
+	for (i=0; i<emi_queue_size; i++) {
+		emi_queue[i] = (int *)malloc(emi_buffer_size);
+		if (emi_queue[i] == NULL) {
+			fprintf(myout, "ERROR: could not malloc %d bytes of memory for emi_queue[%d]\n", emi_buffer_size, i);
+			fflush(myout);
+			exit(1);
+		}
+		memset(emi_queue[i], 0, emi_buffer_size);
 	}
-	emi_buffer = emi_queue; // first export data
 	sndreq_size = neighbor_count * snd_parallelism;
 	sndreq_list = (MPI_Request *)malloc(sizeof(MPI_Request) * sndreq_size);
 	sndreq_status_list = (MPI_Status *)malloc(sizeof(MPI_Status) * sndreq_size);
 	sndreq_index = 0;
 #ifdef DEBUG_COMM
 	if (myrank == 0) {
-		fprintf(myout, "emi_queue size: %d bytes, set to hold %d exports in a raw, each emi_buffer_size is %dx%dx%dx%lu bytes.\n", emi_queue_size, snd_parallelism, neighbor_count, emi_size, mig_msglen, sizeof(int));
+		fprintf(myout, "emi_queue size: %d buffers, set to hold %d exports in a raw, each buffer is %dx%dx%dx%lu bytes.\n", emi_queue_size, snd_parallelism, neighbor_count, emi_size, mig_msglen, sizeof(int));
 		fflush(myout);
 	}
 #endif
@@ -367,9 +397,11 @@ void psearch()
 		imi_chrom_index[i] = -1; // -1 means not used
 	imi_temp = (int *)malloc(sizeof(int) * emi_size * mig_msglen);
 	memset(imi_temp, 0, sizeof(int) * emi_size * mig_msglen);
-
+#ifdef PGA_USE_IBSEND
+	// Buffered non-blocking send:
 	// provide our own outgoing message buffer for MPI to use. This is
-	// because we know problem size and the buffer size needed better
+	// because we know problem size and the buffer size needed better.
+	// NOTE: ibsend's robustness differs across diff MPI. NOT RECOMMENDED
 	int mpi_buffer_size;
 	MPI_Pack_size (snd_parallelism*neighbor_count*emi_size*mig_msglen, MPI_INT, topoComm, &mpi_buffer_size);
 	mpi_buffer_size += (snd_parallelism*neighbor_count*MPI_BSEND_OVERHEAD);
@@ -385,6 +417,7 @@ void psearch()
 		exit(1);
 	}
 	MPI_Buffer_attach(mpi_buffer, mpi_buffer_size);
+#endif
 
 
 	// performance study: init history buffers
@@ -403,8 +436,10 @@ void psearch()
 	fprintf(myout, ">>>[pga_config]: snd_parallelism=%d export buffers\n", snd_parallelism);
 	fprintf(myout, ">>>[pga_config]: emi_queue_size=%d bytes\n", emi_queue_size);
 	fprintf(myout, ">>>[pga_config]: sndreq_size=%d Ibsends\n", sndreq_size);
+#ifdef PGA_USE_IBSEND
 	fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size=%d bytes (%dx%dx(%dx%dx%d+%d)x%d)\n", mpi_buffer_size, neighbor_count, snd_parallelism, emi_size, mig_msglen, (int)sizeof(int), MPI_BSEND_OVERHEAD, MY_MPI_SNDBUF_FACTOR);
 	fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size multiplier=%d \n", MY_MPI_SNDBUF_FACTOR);
+#endif
 	fprintf(myout, ">>>[pga_config]: IMI_BUFFER_CAP=%d imports\n", IMI_BUFFER_CAP);
 	fprintf(myout, ">>>[pga_config]: imi_size=%d single-neighbor imports\n", imi_size);
 	fprintf(myout, ">>>[pga_config]: IMI_HIST_BUFFER_SIZE=%d solutions\n", IMI_HIST_BUFFER_SIZE);
@@ -456,15 +491,20 @@ void psearch()
 	// free resources
 	free(neighbor);
 	//free(emi_buffer); 
+	for (i=0; i<emi_queue_size; i++) {
+		free(emi_queue[i]);
+	}
 	free(emi_queue); 
 	for (i=0; i<imi_size; i++) {
 		free(imi_buffer[i]);
 	}
 	free(imi_buffer);
 	free(imi_chrom_index);
+#ifdef PGA_USE_IBSEND
 	int actual_freed_size;
-	MPI_Buffer_detach(mpi_buffer, &actual_freed_size);
+	MPI_Buffer_detach(&mpi_buffer, &actual_freed_size);
 	free(mpi_buffer);
+#endif
 }
 // find the rectangle size closest to the square root of np
 int get_best_dim(int np, int *rowSize, int *colSize)

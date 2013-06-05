@@ -9,6 +9,8 @@ CXX          = mpicc
 # async mode
 #CXXFLGS     += -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
 CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DDEBUG_COMM
+# use MPI_Ibsend(), not robust 'cause buffer policy differs on diff MPIs
+#CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DDEBUG_COMM -DPGA_USE_IBSEND
 SRCC         = c
 SRCH         = h
 # use static libraries

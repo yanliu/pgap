@@ -7,6 +7,7 @@
 #define MIG_ELITE 1
 #define MIG_RANDOM 2
 //void create_mpi_chrom_type(Chrom chrom, MPI_Datatype *t);
+int *send_req();
 int send_emi();
 int recv_imi();
 int fill_imi();

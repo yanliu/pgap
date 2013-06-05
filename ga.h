@@ -88,7 +88,7 @@ void print_config(void);
 void output_result(int * solution, long long objv, double exec_time);
 void * search(void *args);// thread-type def
 #ifdef PGAMODE
-int emigrate(int newimprove, int noimprove);
+int emigrate(int * emi_buffer, int newimprove, int noimprove);
 int immigrate(Chrom * imi, int *origin);
 //void print_imi(void);
 #endif
@@ -113,7 +113,7 @@ extern int debug;
 extern pthread_mutex_t emi_mutex, imi_mutex;
 extern int emi_ready, imi_ready;
 #endif
-extern int emi_size, *emi_buffer, imi_size, **imi_buffer, migrate_freq, immigrate_freq;
+extern int emi_size, imi_size, **imi_buffer, migrate_freq, immigrate_freq;
 extern int myrank, net_size;
 extern MPI_Comm topoComm, migComm;
 extern int send_seq; 

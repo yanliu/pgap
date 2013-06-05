@@ -714,7 +714,7 @@ void output_result(int * solution, long long objv, double exec_time)
 }
 #ifdef PGAMODE
 // put 2 selected chroms in emigration buffer
-int emigrate(int newimprove, int noimprove)
+int emigrate(int * emi_buffer, int newimprove, int noimprove)
 {
 	int n_elite, n_rand, origin;
 	// emigrant selection
@@ -1042,12 +1042,13 @@ void * search(void * args)
 			//sched_yield(); // yield on single cpu arch
 #else
 			// emigrate
-			if (emigrate(new_improve, no_improve)) {
+			int * emi_buffer;
+			if ((emi_buffer = send_req()) != NULL && emigrate(emi_buffer, new_improve, no_improve)) {
 				if (new_improve)
 					if (pdebug) fprintf(myout, "+++emi(time,iter,bestSolnQ,type): %lf %lld %lld %d new improves\n", commT1, iterations, elite_chrom.ev[EV_OBJV], new_improve);
 #ifdef PGA_NONBLOCK_MODE
 				//send
-				send_emi();
+				send_emi(); // the actuall send
 #else
 				// block mode: use MPI_Gather
 				MPI_Comm_rank(migComm, &myrank);
