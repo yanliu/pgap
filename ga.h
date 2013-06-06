@@ -29,27 +29,37 @@
 #define EV_FITV   1
 #define EV_UFITV  2 
 typedef struct {
-    int * solution; // a vector of size of items
-    // measure set: obj, fitness, and unfitness
-    long long ev[EV_COUNT]; // obj func value
+	int * solution; // a vector of size of items
+	// measure set: obj, fitness, and unfitness
+	long long ev[EV_COUNT]; // obj func value
 } Chrom;
 
 // population statistics
 typedef struct {
-    int total_improve;
+	int total_improve;
 #ifdef PGAMODE
-    int mig_improve;
+	int mig_improve;
 #endif
-    double startT;
-    double bestT;
-    double endT;
-    long long min_fitv;
-    long long max_fitv;
-    long long avg_fitv;
-    double commT;
-    double comm_sendT;
-    double comm_recvT;
-    double ioT;
+	double startT;
+	double bestT;
+	double endT;
+	long long min_fitv;
+	long long max_fitv;
+	long long avg_fitv;
+	double commT;
+	double comm_sendT;
+	double comm_recvT;
+#ifdef T_PROFILING
+	double ioT;
+	double immigrateT;
+	double selectionT;
+	double injectT;
+	double crossmutT; // crossmut or direct copy mig
+	double feasibT;
+	double improveT;
+	double evalT;
+	double replaceT;
+#endif
 } STATTYPE;
 
 // GA routines 
@@ -94,6 +104,7 @@ int immigrate(Chrom * imi, int *origin);
 #endif
 // read config
 void config(int argc, char **argv);
+void gastat_init();
 
 // data.c
 extern VTYPE *v;

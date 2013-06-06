@@ -656,7 +656,11 @@ void print_stat()
 #ifdef PGAMODE
 	//fprintf(myout, "=====stat[totalImpv,migImpv,bestT,T,commT, min,max,avg] %d %d %lf %lf %lf %lld %lld %lld\n", gastat.total_improve, gastat.mig_improve, gastat.bestT - gastat.startT, gastat.endT - gastat.startT, gastat.commT, gastat.min_fitv, gastat.max_fitv, gastat.avg_fitv);
 	// totalImpv, migImprove, bestT, sendT, recvT
-	fprintf(myout, "=====stat %d %d %lf %lf %lf\n", gastat.total_improve, gastat.mig_improve, gastat.bestT - gastat.startT, gastat.comm_sendT, gastat.comm_recvT);
+	fprintf(myout, "=====stat %d %d %lf %lf %lf ", gastat.total_improve, gastat.mig_improve, gastat.bestT - gastat.startT, gastat.comm_sendT, gastat.comm_recvT);
+#ifdef T_PROFILING
+	fprintf(myout, "%lf %lf %lf %lf %lf %lf %lf %lf ", gastat.immigrateT, gastat.selectionT, gastat.injectT, gastat.crossmutT, gastat.feasibT, gastat.improveT, gastat.evalT, gastat.replaceT);
+#endif
+	fprintf(myout, "\n");
 #else
 	fprintf(myout, "=====stat[totalImpv,migImpv,T,bestT,min,max,avg] %d %d %lf %lf %lld %lld %lld\n", gastat.total_improve, 0, gastat.bestT - gastat.startT, gastat.endT - gastat.startT, gastat.min_fitv, gastat.max_fitv, gastat.avg_fitv);
 #endif
@@ -816,6 +820,9 @@ void * search(void * args)
 	double commT1, commT2, commT3;
 	int coord1[2], coord2[2], cart_dist; // MPI_Cart topo coordinates and dist
 #endif
+#ifdef T_PROFILING
+	double T0, T1;
+#endif
 	Chrom *parent1, *parent2, child;
 	Chrom elite_chrom;
 	char buffer[256];
@@ -872,20 +879,8 @@ void * search(void * args)
 		rank[i] = (int *) malloc(pop_size * sizeof(int));
 	}
 	wheel = (double *) malloc(pop_size * sizeof(double));
-	// initialize stat
-	gastat.total_improve = 0;
-#ifdef PGAMODE
-	gastat.mig_improve = 0;
-#endif
-	gastat.startT = get_ga_time();
-	gastat.bestT = gastat.startT;
-	gastat.endT = gastat.startT;
-	gastat.min_fitv = -1;
-	gastat.max_fitv = -1;
-	gastat.avg_fitv = -1;
-	gastat.commT = 0;
-	gastat.comm_sendT = 0;
-	gastat.comm_recvT = 0;
+	gastat_init();
+
 	// GA: generate initial population 
 	gen_init_pop(seeding);
 	// GA: evaluate the whole population
@@ -906,13 +901,26 @@ void * search(void * args)
 	iterations = 0;
 	do
 	{
+#ifdef T_PROFILING
+		T0 = get_ga_time();
+#endif
 #ifdef PGAMODE
 		// if there are immigrants, take them as new children
 		// but don't crossover and mutate
 		imiType = immigrate(&immigrant, &imi_origin);
 #endif
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.immigrateT += T1 - T0;
+		T0 = T1;
+#endif
 		// GA: selection
 		selection(&i1, &i2);
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.selectionT+= T1 - T0;
+		T0 = T1;
+#endif
 		parent1 = population + i1;
 #ifdef PGAMODE
 		// if immigrant is randomly picked by neighbor, inject as a parent
@@ -925,6 +933,11 @@ void * search(void * args)
 		parent2 = population + i2;
 #ifdef PGAMODE
 		}
+#endif
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.injectT+= T1 - T0;
+		T0 = T1;
 #endif
 		if (debug) print_chrom(*parent1, "parent1");	
 		if (debug) print_chrom(*parent2, "parent2");
@@ -954,14 +967,34 @@ void * search(void * args)
 #ifdef PGAMODE
 		}
 #endif
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.crossmutT += T1 - T0;
+		T0 = T1;
+#endif
 		// GA: improve feasibility
 		improve_feasibility_chu(&child);
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.feasibT += T1 - T0;
+		T0 = T1;
+#endif
 		if (debug) print_chrom(child, "after improve feasi");	
 		// GA: improve solution quality
 		improve_quality_chu(&child);
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.improveT += T1 - T0;
+		T0 = T1;
+#endif
 		if (debug) print_chrom(child, "after improve quality");	
 		// GA: evaluation
 		eval_chrom(&child);
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.evalT += T1 - T0;
+		T0 = T1;
+#endif
 		// count improvement: feasible and improved fitness
 		if (child.ev[EV_UFITV] == 0 && population[rank[EV_FITV][0]].ev[EV_FITV] > child.ev[EV_FITV]) {
 			no_improve = 0;
@@ -1008,6 +1041,11 @@ void * search(void * args)
 			}
 		}
 
+#ifdef T_PROFILING
+		T1 = get_ga_time();
+		gastat.replaceT += T1 - T0;
+		T0 = T1;
+#endif
 #ifdef PGAMODE
 		if (from_mig) from_mig = 0; // reset mig improve indicator
 #endif		
@@ -1417,6 +1455,33 @@ void print_config() {
 	fflush(stdout);
 #ifdef PGAMODE
 	}
+#endif
+}
+void gastat_init() {
+	// initialize stat
+	gastat.total_improve = 0;
+#ifdef PGAMODE
+	gastat.mig_improve = 0;
+#endif
+	gastat.startT = get_ga_time();
+	gastat.bestT = gastat.startT;
+	gastat.endT = gastat.startT;
+	gastat.min_fitv = -1;
+	gastat.max_fitv = -1;
+	gastat.avg_fitv = -1;
+	gastat.commT = 0;
+	gastat.comm_sendT = 0;
+	gastat.comm_recvT = 0;
+#ifdef T_PROFILING
+	gastat.ioT = 0;
+	gastat.immigrateT = 0;
+	gastat.selectionT = 0;
+	gastat.injectT = 0;
+	gastat.crossmutT = 0;
+	gastat.feasibT = 0;
+	gastat.improveT = 0;
+	gastat.evalT = 0;
+	gastat.replaceT = 0;
 #endif
 }
 #endif
