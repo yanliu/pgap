@@ -4,7 +4,7 @@ SUARCH_MIC  :=
 SUARCH_GPU  :=
 
 # comm mode: async or sync
-COMM_MODE   := async
+COMM_MODE   := sync
 ifeq "$(COMM_MODE)" "sync"
 CXXFLGS     += -DPGAMODE_SYNC
 endif
@@ -53,24 +53,20 @@ LIBS_DEFAULT = -lm
 all: $(MAINS) Makefile
 
 $(MAINS): % : %.$(SRCC) $(DEFS) $(OBJS)
-ifdef SUARCH_MIC
-	@$(CXX) -xhost $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)-host $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
-	@make clean
-	@$(CXX) -mmic $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)-mic $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
-else
-	@$(CXX) $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE) $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
-endif
+	@$(CXX) $(SUARCH_MIC) $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)$(SUARCH_MIC) $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT)
 
 # compile
 $(DEFS):
 $(OBJS): %.o: %.$(SRCC) %.$(SRCH)
-	@$(CXX) $(CXXFLGS) -I. $(INCPATH) -o $@ -c $<
+	@$(CXX) $(SUARCH_MIC) $(CXXFLGS) -I. $(INCPATH) -o $@ -c $<
 # link
 
 # clean
 clean:
 	@rm -f $(OBJS) 
-EXECS_ASYNC      = $(MAINS:=-async)
-EXECS_SYNC      = $(MAINS:=-sync)
+SUARCH_MICS      := -mmic -xhost
+COMM_MODES       := async sync
+EXECS_COMM := $(foreach c, $(COMM_MODES), $(MAINS:=-$(c)))
+EXECS_COMM_MICS := $(foreach m, $(SUARCH_MICS), $(EXECS_COMM:=$(m)))
 cleanall:
-	@rm -f $(EXECS_ASYNC) $(EXECS_SYNC) $(OBJS) 
+	@rm -f $(EXECS_COMM) $(EXECS_COMM_MICS) $(OBJS)
