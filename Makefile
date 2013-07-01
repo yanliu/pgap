@@ -55,7 +55,8 @@ all: $(MAINS) Makefile
 $(MAINS): % : %.$(SRCC) $(DEFS) $(OBJS)
 ifdef SUARCH_MIC
 	@$(CXX) -xhost $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)-host $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
-	@$(CXX) -mmic $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)-host $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
+	@make clean
+	@$(CXX) -mmic $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)-mic $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
 else
 	@$(CXX) $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE) $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT) 
 endif
