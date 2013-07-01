@@ -37,6 +37,8 @@ MAINS        = ga
 # external directories, set by env vars
 #EXTDIRS      = $(MPICH_GM_HOME) $(GSL_HOME) $(SPRNG_HOME)
 EXTDIRS      = $(MPICH_GM_HOME) $(SPRNG_HOME)
+# stampede
+#EXTDIRS      = $(MPICH_GM_HOME)/lib64 $(SPRNG_HOME)
 
 # include files
 INCPATH  = $(EXTDIRS:%=-I%/include)
