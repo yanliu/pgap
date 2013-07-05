@@ -425,24 +425,31 @@ void psearch()
 	memset(imi_hist_origin, 0, sizeof(int) * IMI_HIST_BUFFER_SIZE);
 
 	// print out pga configuration
-	fprintf(myout, ">>>[pga_config]: neighbor_count=%d\n", neighbor_count);
 	fprintf(myout, ">>>[pga_config]: topo=");
 	for (i=0; i<neighbor_count+1; i++)
 		fprintf(myout, "%d ", neighbor[i]);
 	fprintf(myout, "\n");
-	fprintf(myout, ">>>[pga_config]: emi_size=%d solutions\n", emi_size);
-	fprintf(myout, ">>>[pga_config]: mig_msglen=%d solution variables\n", mig_msglen);
-	fprintf(myout, ">>>[pga_config]: emi_buffer_size=%d bytes\n", emi_buffer_size);
-	fprintf(myout, ">>>[pga_config]: snd_parallelism=%d export buffers\n", snd_parallelism);
-	fprintf(myout, ">>>[pga_config]: emi_queue_size=%d bytes\n", emi_queue_size);
-	fprintf(myout, ">>>[pga_config]: sndreq_size=%d Ibsends\n", sndreq_size);
+	if (myrank == 0) {
+		fprintf(myout, ">>>[pga_config]: neighbor_count=%d\n", neighbor_count);
+		fprintf(myout, ">>>[pga_config]: emi_size=%d solutions\n", emi_size);
+		fprintf(myout, ">>>[pga_config]: mig_msglen=%d solution variables\n", mig_msglen);
+		fprintf(myout, ">>>[pga_config]: emi_buffer_size=%d bytes\n", emi_buffer_size);
+		fprintf(myout, ">>>[pga_config]: snd_parallelism=%d export buffers\n", snd_parallelism);
+		fprintf(myout, ">>>[pga_config]: emi_queue_size=%d bytes\n", emi_queue_size);
+		fprintf(myout, ">>>[pga_config]: sndreq_size=%d Ibsends\n", sndreq_size);
 #ifdef PGA_USE_IBSEND
-	fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size=%d bytes (%dx%dx(%dx%dx%d+%d)x%d)\n", mpi_buffer_size, neighbor_count, snd_parallelism, emi_size, mig_msglen, (int)sizeof(int), MPI_BSEND_OVERHEAD, MY_MPI_SNDBUF_FACTOR);
-	fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size multiplier=%d \n", MY_MPI_SNDBUF_FACTOR);
+		fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size=%d bytes (%dx%dx(%dx%dx%d+%d)x%d)\n", mpi_buffer_size, neighbor_count, snd_parallelism, emi_size, mig_msglen, (int)sizeof(int), MPI_BSEND_OVERHEAD, MY_MPI_SNDBUF_FACTOR);
+		fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size multiplier=%d \n", MY_MPI_SNDBUF_FACTOR);
 #endif
-	fprintf(myout, ">>>[pga_config]: IMI_BUFFER_CAP=%d imports\n", IMI_BUFFER_CAP);
-	fprintf(myout, ">>>[pga_config]: imi_size=%d single-neighbor imports\n", imi_size);
-	fprintf(myout, ">>>[pga_config]: IMI_HIST_BUFFER_SIZE=%d solutions\n", IMI_HIST_BUFFER_SIZE);
+		fprintf(myout, ">>>[pga_config]: IMI_BUFFER_CAP=%d imports\n", IMI_BUFFER_CAP);
+		fprintf(myout, ">>>[pga_config]: imi_size=%d single-neighbor imports\n", imi_size);
+		fprintf(myout, ">>>[pga_config]: IMI_HIST_BUFFER_SIZE=%d solutions\n", IMI_HIST_BUFFER_SIZE);
+	}
+#ifdef HETERO
+	fprintf(myout, ">>>[pga_config]: HETERO %d %d\n", myrank, HETERO);
+#else
+	fprintf(myout, ">>>[pga_config]: HETERO %d %d\n", myrank, 1);
+#endif
 	fflush(myout);
 
 	// start of PGA

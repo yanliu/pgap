@@ -92,7 +92,7 @@ void chrom_copy(Chrom c1, Chrom *c2);
 double get_ga_time(void);
 void print_pop(int howmany);
 void print_chrom(Chrom chrom, char *title);
-void print_stat(void);
+void print_stat(FILE * myout);
 void print_rank(int ev_i);
 void print_config(void);
 void output_result(int * solution, long long objv, double exec_time);

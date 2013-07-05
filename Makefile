@@ -2,9 +2,15 @@
 # Intel MIC arch, default is undefined
 SUARCH_MIC  :=
 SUARCH_GPU  :=
+# if compile, set hetero factor
+ifeq "$(SUARCH_MIC)" "-mmic"
+CXXFLGS     += -DHETERO=10
+endif
+# stampede
+#SPRNG_HOME  := $(WORK)/sprng2.0$(SUARCH_MIC)
 
 # comm mode: async or sync
-COMM_MODE   := sync
+COMM_MODE   := async
 ifeq "$(COMM_MODE)" "sync"
 CXXFLGS     += -DPGAMODE_SYNC
 endif
@@ -15,7 +21,7 @@ CXX          = mpicc
 #CXXFLGS     += -g -Wall -DGSL_SPRNG
 #CXXFLGS     += -g -Wall -DGSL_SPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
-CXXFLGS     += -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING
+CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DNOIO
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DDEBUG_COMM
 # use MPI_Ibsend(), not robust 'cause buffer policy differs on diff MPIs
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DDEBUG_COMM -DPGA_USE_IBSEND
@@ -35,10 +41,8 @@ DEFS       = $(DEFTARGETS:=.h)
 MAINS        = ga
 
 # external directories, set by env vars
-#EXTDIRS      = $(MPICH_GM_HOME) $(GSL_HOME) $(SPRNG_HOME)
-EXTDIRS      = $(MPICH_GM_HOME) $(SPRNG_HOME)
-# stampede
-#EXTDIRS      = $(MPICH_GM_HOME)/lib64 $(SPRNG_HOME)
+#EXTDIRS      = $(GSL_HOME) $(SPRNG_HOME)
+EXTDIRS      = $(SPRNG_HOME)
 
 # include files
 INCPATH  = $(EXTDIRS:%=-I%/include)

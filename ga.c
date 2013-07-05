@@ -41,6 +41,9 @@ char strategy_stop = 'i'; // fixed number of iterations; i-w/o improve
 long long iterations; // loop control: number of iterations 
 int max_iterations = 1000000; // maximum iterations 
 int improve_threshold = 500; // upper-limit of non-improved iterations 
+// walltime is not accurate: each process may reach time T at different time.
+// this option is used to capture output before job is killed by cluster sched
+int walltime = 3600; // upper-limit of exec time in seconds. 
 // get other heuristic's result	
 int seeding = 0; // seeding or not
 // always keep the best solution
@@ -617,6 +620,7 @@ void print_pop(int howmany)
 }
 void print_chrom(Chrom chrom, char * title)
 {
+#ifndef NOIO
 	int j, i; 
 	int bins[m][n];
 	int bi[m];
@@ -650,13 +654,14 @@ void print_chrom(Chrom chrom, char * title)
 	fprintf(myout, "\n");	   
 */
 	fflush(myout);
+#endif
 }
-void print_stat()
+void print_stat(FILE * myout)
 {
 #ifdef PGAMODE
 	//fprintf(myout, "=====stat[totalImpv,migImpv,bestT,T,commT, min,max,avg] %d %d %lf %lf %lf %lld %lld %lld\n", gastat.total_improve, gastat.mig_improve, gastat.bestT - gastat.startT, gastat.endT - gastat.startT, gastat.commT, gastat.min_fitv, gastat.max_fitv, gastat.avg_fitv);
 	// totalImpv, migImprove, bestT, sendT, recvT
-	fprintf(myout, "=====stat %d %d %lf %lf %lf ", gastat.total_improve, gastat.mig_improve, gastat.bestT - gastat.startT, gastat.comm_sendT, gastat.comm_recvT);
+	fprintf(myout, "=====statZ%dZ %d %d %lf %lf %lf ", myrank, gastat.total_improve, gastat.mig_improve, gastat.bestT - gastat.startT, gastat.comm_sendT, gastat.comm_recvT);
 #ifdef T_PROFILING
 	fprintf(myout, "%lf %lf %lf %lf %lf %lf %lf %lf ", gastat.immigrateT, gastat.selectionT, gastat.injectT, gastat.crossmutT, gastat.feasibT, gastat.improveT, gastat.evalT, gastat.replaceT);
 #endif
@@ -899,6 +904,11 @@ void * search(void * args)
 	roulette_init();   
 	// GA: start evolution 
 	iterations = 0;
+
+#ifdef T_PROFILING
+	double tickStart = get_ga_time();
+	int tickInterval = 60; // output something every tickInterval seconds
+#endif
 	do
 	{
 #ifdef T_PROFILING
@@ -1022,9 +1032,9 @@ void * search(void * args)
 #ifdef PGAMODE
 			}
 #endif
-//#ifndef DEBUG_COMM
-			print_stat();
-//#endif
+#ifndef NOIO
+			print_stat(myout);
+#endif
 			solution_verify(child);
 		} else {
 			no_improve++;
@@ -1117,11 +1127,24 @@ void * search(void * args)
 		}
 #endif
 #endif
+#ifdef T_PROFILING
+		double tickT = get_ga_time();
+		if (tickT - tickStart > tickInterval) {
+#ifdef PGAMODE
+			fprintf(myout, "%d tick mark %d seconds\n", myrank, tickInterval);
+#else
+			fprintf(myout, "%d tick mark %d seconds\n", 0, tickInterval);
+#endif
+			fflush(myout);
+			tickStart = tickT;
+		}
+#endif
 	// GA: stopping rules 
-	} while ((strategy_stop=='f' && iterations<max_iterations) || (strategy_stop=='i' && no_improve < improve_threshold) || (strategy_stop=='q' && stopping_quality>0 && ((elite_chrom.ev[EV_FITV]>stopping_quality && elite_chrom.ev[EV_UFITV]==0) || (elite_chrom.ev[EV_UFITV]!=0))));
+	} while ((strategy_stop=='f' && iterations<max_iterations) || (strategy_stop=='i' && no_improve < improve_threshold) || (strategy_stop=='q' && stopping_quality>0 && ((elite_chrom.ev[EV_FITV]>stopping_quality && elite_chrom.ev[EV_UFITV]==0) || (elite_chrom.ev[EV_UFITV]!=0))) || (strategy_stop=='t' && (get_ga_time() - gastat.startT <= walltime)));
 		
 	gastat.endT = get_ga_time();
 	
+#ifndef NOIO
 	// output results (elite) 
 	print_chrom(elite_chrom, "ZTheBestSolution");
 	fprintf(myout, "Stat-iterations: %lld iterations\n", iterations);
@@ -1130,6 +1153,20 @@ void * search(void * args)
 	fprintf(myout, "Stat-best-solution-time: %lf\n", gastat.bestT - gastat.startT);
 	// print_chrom(elite_chrom[pre_pop], task_num); 
 	//output_result(population[rank[EV_OBJV][0]].solution, population[rank[EV_OBJV][0]].ev[EV_OBJV], gastat.endT - gastat.startT);
+#endif
+
+	// output to stdout too
+#ifdef PGAMODE
+	fprintf(stdout, "\n=====chromosome[Z%dZ] %lld %lld %lld %lld %lf %lf=====\n", myrank, elite_chrom.ev[EV_OBJV], elite_chrom.ev[EV_FITV], elite_chrom.ev[EV_UFITV], iterations, (gastat.bestT-gastat.startT), (gastat.endT - gastat.startT));
+#else
+	fprintf(stdout, "\n=====chromosome[ZZ] %lld %lld %lld %lld %lf %lf=====\n", elite_chrom.ev[EV_OBJV], elite_chrom.ev[EV_FITV], elite_chrom.ev[EV_UFITV], iterations, (gastat.bestT-gastat.startT), (gastat.endT - gastat.startT));
+#endif
+	fflush(stdout);
+	print_stat(stdout);
+
+	// wait until other processes are done if we care
+	if (strategy_stop != 'q')	
+		MPI_Barrier(MPI_COMM_WORLD);
 
 	// free resources
 	for (j=0; j<pop_size; j++) {
@@ -1169,6 +1206,8 @@ int main(int argc, char ** argv)
 	// set output file descriptor
 	myout = stdout;
 	char outputpath[1024];
+	strcpy(outputpath, "");
+#ifndef NOIO
 #ifdef PGAMODE
 	// must set
 	if (strlen(myoutputdir)==0) strcpy(myoutputdir, ".");
@@ -1182,6 +1221,7 @@ int main(int argc, char ** argv)
 		strcpy(outputpath, "");
 	}
 #endif 
+#endif
 	if (strlen(outputpath)>0) {
 		if ((myout=fopen(outputpath, "w")) == NULL) {
 			fprintf(stderr, "error open %s for writing\n", outputpath);
@@ -1266,6 +1306,9 @@ void config(int argc, char **argv)
 						break;
 					case 'q':
 						stopping_quality = number;
+						break;
+					case 't':
+						walltime = number;
 						break;
 					case 'i':
 					default:
@@ -1369,6 +1412,11 @@ void config(int argc, char **argv)
 					//exit (0);
 					immigrate_freq = migrate_freq / 2; // default value
 				} 
+#ifdef HETERO
+				// MIC processor: speed up export and import
+				migrate_freq /= HETERO;
+				immigrate_freq /= HETERO;
+#endif
 				break;
 			case 'P':
 				i++;
@@ -1400,6 +1448,7 @@ void config(int argc, char **argv)
 				printf ("	   i N: quit if w/o improve w/ N chrom\n");
 				printf ("	   f N: quit after N iterations\n");
 				printf ("	   q bound: quit if bound is reached\n");
+				printf ("	   t walltime: quit after walltime seconds\n");
 /*
 				printf ("  -c : prob of crossover [0.0 .. 1.0]\n");
 				printf (" -m : prob of mutation [0.0 .. 1.0]\n");
@@ -1434,6 +1483,9 @@ void print_config() {
 		break;
 	case 'q':
 		printf(" %lld", stopping_quality);
+		break;
+	case 't':
+		printf(" %d", walltime);
 		break;
 	case 'i':
 	default:
