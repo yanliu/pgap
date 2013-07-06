@@ -907,7 +907,8 @@ void * search(void * args)
 
 #ifdef T_PROFILING
 	double tickStart = get_ga_time();
-	int tickInterval = 60; // output something every tickInterval seconds
+	int tickCount =0;
+	int tickInterval = 300; // output something every tickInterval seconds
 #endif
 	do
 	{
@@ -1130,10 +1131,13 @@ void * search(void * args)
 #ifdef T_PROFILING
 		double tickT = get_ga_time();
 		if (tickT - tickStart > tickInterval) {
+			tickCount ++;
 #ifdef PGAMODE
-			fprintf(myout, "%d tick mark %d seconds\n", myrank, tickInterval);
+			fprintf(myout, "%d tick mark %d seconds\n", myrank, tickInterval * tickCount);
+			fprintf(stderr, "%d tick mark %d seconds\n", myrank, tickInterval * tickCount);
 #else
-			fprintf(myout, "%d tick mark %d seconds\n", 0, tickInterval);
+			fprintf(myout, "%d tick mark %d seconds\n", 0, tickInterval * tickCount);
+			fprintf(stderr, "%d tick mark %d seconds\n", 0, tickInterval * tickCount);
 #endif
 			fflush(myout);
 			tickStart = tickT;
