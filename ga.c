@@ -1429,6 +1429,10 @@ void config(int argc, char **argv)
 					exit (0);
 				} 
 				if (snd_parallelism <1) snd_parallelism = 1;
+#ifdef HETERO_BUFFERCAPDIFF
+				// MIC processor: hold less sends before mpi wait
+				snd_parallelism /= HETERO_BUFFERCAPDIFF;
+#endif
 				break;
 #endif
 			case 'h':

@@ -1,16 +1,30 @@
+# to build more than one exec, use NAME=VALUE at command line
+# e.g., make clean;make SUARCH_MIC=-mmic HETERO=10 COMM_MODE=async EXEC_SUFFIX=10
+# batch generation of execs:
+# for m in async sync; do for a in -xhost -mmic; do for h in 1 5 10 15 20; do make clean;make SUARCH_MIC=$a HETERO=$h COMM_MODE=$m EXEC_SUFFIX=$h; done; done; done
+# generation of general -mmic and -xhost:
+# for m in async sync; do for a in -xhost -mmic; do make clean;make SUARCH_MIC=$a HETERO=10 COMM_MODE=$m ; done; done
+# generation of cpu-only version
+# for m in async sync; do make clean; make COMM_MODE=$m ; done
+# will build ga-async-mmic10
 # Architecture-related flags
-# Intel MIC arch, default is undefined
-SUARCH_MIC  :=
-SUARCH_GPU  :=
+# Intel MIC arch, default is empty; optoins: -mmic or -xhost
+SUARCH_MIC  ?= -xhost
+SUARCH_GPU  ?=
 # if compile, set hetero factor
 ifeq "$(SUARCH_MIC)" "-mmic"
-CXXFLGS     += -DHETERO=10
+# mig interval diff b/w host and mic
+HETERO      ?= 10
+CXXFLGS     += -DHETERO=$(HETERO)
+# snd parallelism diff b/w host and mic. default: the same
+CXXFLGS     += -DHETERO_BUFFERCAPDIFF=1
 endif
+EXEC_SUFFIX ?=
 # stampede
-#SPRNG_HOME  := $(WORK)/sprng2.0$(SUARCH_MIC)
+SPRNG_HOME  := $(WORK)/sprng2.0$(SUARCH_MIC)
 
 # comm mode: async or sync
-COMM_MODE   := async
+COMM_MODE   ?= sync
 ifeq "$(COMM_MODE)" "sync"
 CXXFLGS     += -DPGAMODE_SYNC
 endif
@@ -21,7 +35,8 @@ CXX          = mpicc
 #CXXFLGS     += -g -Wall -DGSL_SPRNG
 #CXXFLGS     += -g -Wall -DGSL_SPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
-CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DNOIO
+#CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DNOIO
+CXXFLGS     +=  -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DDEBUG_COMM
 # use MPI_Ibsend(), not robust 'cause buffer policy differs on diff MPIs
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DDEBUG_COMM -DPGA_USE_IBSEND
@@ -57,7 +72,7 @@ LIBS_DEFAULT = -lm
 all: $(MAINS) Makefile
 
 $(MAINS): % : %.$(SRCC) $(DEFS) $(OBJS)
-	@$(CXX) $(SUARCH_MIC) $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)$(SUARCH_MIC) $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT)
+	@$(CXX) $(SUARCH_MIC) $(CXXFLGS) $(STATICLINK) -I. $(INCPATH) -o $@-$(COMM_MODE)$(EXEC_SUFFIX)$(SUARCH_MIC) $< $(OBJS) $(LIBPATH) $(LIBS) $(LIBS_DEFAULT)
 
 # compile
 $(DEFS):

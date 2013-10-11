@@ -436,7 +436,7 @@ void psearch()
 		fprintf(myout, ">>>[pga_config]: emi_buffer_size=%d bytes\n", emi_buffer_size);
 		fprintf(myout, ">>>[pga_config]: snd_parallelism=%d export buffers\n", snd_parallelism);
 		fprintf(myout, ">>>[pga_config]: emi_queue_size=%d bytes\n", emi_queue_size);
-		fprintf(myout, ">>>[pga_config]: sndreq_size=%d Ibsends\n", sndreq_size);
+		fprintf(myout, ">>>[pga_config]: sndreq_size=%d Ibsends/Isends\n", sndreq_size);
 #ifdef PGA_USE_IBSEND
 		fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size=%d bytes (%dx%dx(%dx%dx%d+%d)x%d)\n", mpi_buffer_size, neighbor_count, snd_parallelism, emi_size, mig_msglen, (int)sizeof(int), MPI_BSEND_OVERHEAD, MY_MPI_SNDBUF_FACTOR);
 		fprintf(myout, ">>>[pga_config]: MPI outgoing msg buf size multiplier=%d \n", MY_MPI_SNDBUF_FACTOR);
