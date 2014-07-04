@@ -522,7 +522,7 @@ int get_best_dim(int np, int *rowSize, int *colSize)
 	while (p > 1 &&(p * q != np || p > q)) {
 		p --;
 		q = np / p;
-	i++;
+		i++;
 	}
 	*rowSize = p;
 	*colSize = q;

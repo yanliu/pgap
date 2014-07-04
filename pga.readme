@@ -61,3 +61,10 @@ no, of course
 - trace: if an immigrant is kept as remote elite, we put it in a small-size buffer its solution quality and origin; at emigrate time, we check emigrant's solution quality against history and find its origin. Two different chroms may have the same soln quality and from different origin, but it's rare.
 
 [] an important consideration of comm: what to emigrate when there is few new improves at later stage of evolution?
+
+[] why one-sided comm does not fit?
+- one-sided comm allocates a window (buffer) as comm memory during one-side comm; get and put are non-blocking; a handler can be passed to allow the call to MPI_Wait and _Test for handling multiple requests to support larger degree of parallelism.
+- active target comm is similar to send/receive, but only one process needs to specify everything; passive target comm allows multiple origins op on one window.
+- one-sided comm needs sync on window (sync on window, RMAs, sync again on win). origions must sync in both active and passive target comm.
+- MPI_Win_fence for active target comm; MPI_Win_start, complete, post, wait for active too; MPI_Win_lock _unlock for passive. So locking is the way to post data on import buffer. So I guess locking is in the way.
+- MPI_Win_sync syncs public and private win
