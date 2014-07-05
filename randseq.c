@@ -2,64 +2,57 @@
 #define RANDSEQ_C
 /* generate a random sequence of size n, the problem size */
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include "myrng.h"
 #include "randseq.h"
-#include "ga.h"
 
+// shuffle the random sequence memory using Fisher Yates algorithm
+// http://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+int randseq_shuffle(int *randseq, int size)
+{
+	int i, j, tmp;
+	for (i=0; i<size-1; i++) {
+		j = MYRANDI(size-i);
+		tmp = randseq[i];
+		randseq[i] = randseq[j];
+		randseq[j] = tmp;
+	}
+	return 1;
+}
 // init the random sequence memory
 int randseq_init(int **randseq_holder, int size) {
-	int i, j;
-	char ihash[size];
+	if (size <= 0) return 0;
+	int i;
 	int *randseq; 
 	if (*randseq_holder == NULL) {
 		randseq = (int *)malloc(sizeof(int) * size);
-		*randseq_holder = randseq;
-	}
-	memset(ihash, 0, sizeof(char) * size);
-	j = 0;
-	while (j<size) {
-		i = MYRANDI(size);
-		if (ihash[i] == 0) { // this number not used before
-			randseq[j] = i;
-			ihash[i] = 1;
-			j++;
+		if (randseq == NULL) {
+			fprintf(stderr, "randseq_init(): ERROR: out of memory in getting %d integers.\n", size);
+			exit(1);
 		}
+		*randseq_holder = randseq;
+		for (i=0; i<size; i++) randseq[i] = i;
+		randseq_shuffle(randseq, size);
 	}
 	return 1;
 }
-// shuffle the random sequence memory
-int randseq_shuffle(int *randseq, int size)
-{
-	if (randseq == NULL || size < 2) return 0;
-	int num, p, q, i, tmp;
-	// decide number of exchanges
-	num = MYRANDI(size/2) + 1;
-	for (i=0; i<num; i++) {
-		// select two indices randomly
-		p = MYRANDI(size);
-		do {
-			q = MYRANDI(size);
-		} while (p == q);
-		tmp = randseq[q];
-		randseq[q] = randseq[p];
-		randseq[p] = tmp;
-#ifdef DEBUG_RANDSEQ
-		printf("%d<->%d, ", p, q);
-#endif
-	}
-	return 1;
-}
+// free memory. NOTE: randseq will NOT be set to NULL after this call. Set it by yourself!!!
 int randseq_finalize(int *randseq, int size)
 {
 	if (randseq != NULL) free(randseq);
+	randseq = NULL;
 	return 1;
 }
 int randseq_verify(int *randseq, int size)
 {
 	int i; char ihash[size];
-	memset(ihash, 0, sizeof(int) * size);
+	memset(ihash, 0, sizeof(char) * size);
 	for (i=0; i<size; i++) {
-		if (ihash[randseq[i]] > 0) return 0;
+		if (randseq[i]<0 || randseq[i]>=size || ihash[randseq[i]] > 0) {
+			fprintf(stderr, "randseq[%d/%d] = %d. either dup or out of bound\n", i, size, randseq[i]);
+			return 0;
+		}
 		else ihash[randseq[i]] ++;
 	}
 	return 1;
