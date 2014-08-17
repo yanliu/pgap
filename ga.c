@@ -1,3 +1,10 @@
+/******************************************************************************
+ * ga.c: main program                                                         *
+ * Author: Yan Y. Liu <yanliu@illinois.edu>                                   *
+ * Date: 2014/08/17                                                           *
+ * Copyright and license of this source file are specified in LICENSE.TXT     *
+ * under the root directory of this software package.                         *
+ ******************************************************************************/
 #ifndef GA_ASYNC_C
 #define GA_ASYNC_C
 

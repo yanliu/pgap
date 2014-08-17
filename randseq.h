@@ -1,3 +1,10 @@
+/******************************************************************************
+ * randseq.h: header for generating unique random sequence                    *
+ * Author: Yan Y. Liu <yanliu@illinois.edu>                                   *
+ * Date: 2014/08/17                                                           *
+ * Copyright and license of this source file are specified in LICENSE.TXT     *
+ * under the root directory of this software package.                         *
+ ******************************************************************************/
 #ifndef RANDSEQ_H
 #define RANDSEQ_H
 

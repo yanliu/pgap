@@ -1,3 +1,10 @@
+/******************************************************************************
+ * gsl_sprng.c: rewrite of gsl-sprng.h to use sprng streams                   *
+ * Author: Yan Y. Liu <yanliu@illinois.edu>                                   *
+ * Date: 2014/08/17                                                           *
+ * Copyright and license of this source file are specified in LICENSE.TXT     *
+ * under the root directory of this software package.                         *
+ ******************************************************************************/
 #ifndef GSL_SPRNG_C
 #define GSL_SPRNG_C
 

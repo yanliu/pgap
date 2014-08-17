@@ -1,3 +1,10 @@
+/******************************************************************************
+ * data.h: read problem instance data; define macros to access matrix         *
+ * Author: Yan Y. Liu <yanliu@illinois.edu>                                   *
+ * Date: 2014/08/17                                                           *
+ * Copyright and license of this source file are specified in LICENSE.TXT     *
+ * under the root directory of this software package.                         *
+ ******************************************************************************/
 #ifndef DATA_H
 #define DATA_H
 

@@ -1,5 +1,13 @@
+/******************************************************************************
+ * gsl_sprng.h: rewrite of gsl-sprng.h to use sprng streams                   *
+ * Author: Yan Y. Liu <yanliu@illinois.edu>                                   *
+ * Date: 2014/08/17                                                           *
+ * Copyright and license of this source file are specified in LICENSE.TXT     *
+ * under the root directory of this software package.                         *
+ ******************************************************************************/
+
 /* 
- * gsl-sprng-default.h: rewrite of gsl-sprng.h to use sprng streams
+ * gsl-sprng.h: rewrite of gsl-sprng.h to use sprng streams
  * 
  * This header file is based on  Darren Wilkinson's version for simple interface,
  * which does not use streams. We also refer to IceCube's C++ extension based on

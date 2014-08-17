@@ -1,3 +1,10 @@
+/******************************************************************************
+ * randseq.h: generating unique random sequence                               *
+ * Author: Yan Y. Liu <yanliu@illinois.edu>                                   *
+ * Date: 2014/08/17                                                           *
+ * Copyright and license of this source file are specified in LICENSE.TXT     *
+ * under the root directory of this software package.                         *
+ ******************************************************************************/
 #ifndef RANDSEQ_C
 #define RANDSEQ_C
 /* generate a random sequence of size n, the problem size */
