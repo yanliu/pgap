@@ -1,5 +1,0 @@
-[Logging design in gappga]
-- one log per thread
-- keep logging entries in memory; write to file until 1) >100k; 2) >20 seconds; 3) exiting
-- data format: +++ type1-type2-type3 data1 data2 data3
-- in failure, register an action handler to make sure logging entries are written into files

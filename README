@@ -1,0 +1,2 @@
+
+mpirun -np 4 ga-async -s b -r u -i c -p 200 -t t 300 -e -l /tmp/gaptest -f /path/to/dataset/gap/y/e801600 -M 100 2 50 -P 2

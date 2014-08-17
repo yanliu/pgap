@@ -1,3 +1,12 @@
+# Makefile: Makefile for PGAP
+# Author: Yan Y. Liu <yanliu@illinois.edu>
+# Date: 2014/08/17
+# Common changes to be made to run on your platform include:
+# CXX: if you use a different mpicc
+# CXXFLGS: choose a different one if you want sequential or parallel
+# LIBS: change if you use different random number generator
+# SPRNG_HOME: environment variable to the path of SPRNG
+
 # to build more than one exec, use NAME=VALUE at command line
 # e.g., make clean;make SUARCH_MIC=-mmic HETERO=10 COMM_MODE=async EXEC_SUFFIX=10
 # batch generation of execs:
@@ -9,7 +18,8 @@
 # will build ga-async-mmic10
 # Architecture-related flags
 # Intel MIC arch, default is empty; optoins: -mmic or -xhost
-SUARCH_MIC  ?= -xhost
+SUARCH_MIC  ?= 
+#SUARCH_MIC  ?= -xhost
 SUARCH_GPU  ?=
 # if compile, set hetero factor
 ifeq "$(SUARCH_MIC)" "-mmic"
@@ -21,10 +31,10 @@ CXXFLGS     += -DHETERO_BUFFERCAPDIFF=1
 endif
 EXEC_SUFFIX ?=
 # stampede
-SPRNG_HOME  := $(WORK)/sprng2.0$(SUARCH_MIC)
+#SPRNG_HOME  := $(WORK)/sprng2.0$(SUARCH_MIC)
 
 # comm mode: async or sync
-COMM_MODE   ?= sync
+COMM_MODE   ?= async
 ifeq "$(COMM_MODE)" "sync"
 CXXFLGS     += -DPGAMODE_SYNC
 endif
@@ -32,12 +42,13 @@ endif
 SHELL       += -x
 #CXX          = gcc
 CXX          = mpicc
-#CXXFLGS     += -g -Wall -DGSL_SPRNG
+# Default: Parallel, non-blocking 
+CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING
+# Sequential 
+#CXXFLGS     += -g -Wall -DSPRNG
 #CXXFLGS     += -g -Wall -DGSL_SPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
-#CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DNOIO
-CXXFLGS     +=  -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING
-#CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DDEBUG_COMM
+##CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DT_PROFILING -DDEBUG_COMM
 # use MPI_Ibsend(), not robust 'cause buffer policy differs on diff MPIs
 #CXXFLGS     += -g -Wall -DSPRNG -DPGAMODE -DPGA_NONBLOCK_MODE -DDEBUG_COMM -DPGA_USE_IBSEND
 SRCC         = c

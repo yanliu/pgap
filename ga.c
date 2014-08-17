@@ -3,7 +3,6 @@
 
 //#define PGAMODE
 
-#include "ga.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,13 +11,8 @@
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
-#ifdef PGAMODE
-//#include "pga.h"
-//#include "mpi.h"
-#endif
-#ifdef RANDOM_LOOKUP
-#include "randseq.h"
-#endif
+#include "ga.h"
+
 
 // GA data structure
 Chrom * population;
@@ -204,12 +198,12 @@ void improve_quality_chu(Chrom * chrom)
 		// TODO: How about exchange, instead of reassignment?
 		bin = (chrom->solution[j]);
 		minv = -1;
-		for (i=0; i<m; i++) {
-			if (i!=bin && (minv==-1 || minv>M(v, i,j)) && \
-				   M(v, i, j) < M(v, bin, j) && \
-				   M(w, i, j) + cap[i] <= b[i] ) { 
+		for (i=0; i<m; i++) { // use trasnposed M to speed up
+			if (i!=bin && (minv==-1 || minv>MT(vt, j, i)) && \
+				   MT(vt, j, i) < MT(vt, j, bin) && \
+				   MT(wt, j, i) + cap[i] <= b[i] ) { 
 				min = i;
-				minv = M(v, i,j);
+				minv = MT(vt, j, i);
 			}
 		}
 		if (minv >= 0) {
@@ -1168,10 +1162,11 @@ void * search(void * args)
 	fflush(stdout);
 	print_stat(stdout);
 
+#ifdef PGAMODE
 	// wait until other processes are done if we care
 	if (strategy_stop != 'q')	
 		MPI_Barrier(MPI_COMM_WORLD);
-
+#endif
 	// free resources
 	for (j=0; j<pop_size; j++) {
 		free(population[j].solution);

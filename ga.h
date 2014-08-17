@@ -1,6 +1,7 @@
 #ifndef GA_H
 #define GA_H
 
+#include <stdio.h>
 #ifdef PGAMODE
 #include "mpi.h"
 #include "pga.h"
@@ -11,16 +12,6 @@
 #include "data.h"
 #include "log.h"
 #include "addr.h"
-
-#ifdef GSL_SPRNG
-#include <gsl/gsl_rng.h>
-#include "gsl-sprng.h"
-#include <gsl/gsl_randist.h>
-#else
-#ifdef SPRNG
-#include "mysprng.h"
-#endif
-#endif
 
 #include "myrng.h"
 
@@ -108,7 +99,9 @@ void gastat_init();
 
 // data.c
 extern VTYPE *v;
+extern VTYPE *vt;
 extern WTYPE *w;
+extern WTYPE *wt;
 extern WTYPE *b;
 extern int n;
 extern int m;
