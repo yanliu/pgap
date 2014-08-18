@@ -1,5 +1,4 @@
 # PGAP: A scalable Parallel Genetic Algorithm (PGA) solver for the Generalized Assignment Problem (GAP)
-Author: **Yan Y. Liu <yanliu@illinois.edu>**
 
 ## Introduction
 This is a PGA application that uses MPI non-blocking functions for migrating solutions among PGA demes. The implementation of PGA is based on the island model. Although this solver is written for solving the Generalized Assignment Problem (GAP), it can be easily modified to solve other combinatorial optimization problems. The scalability of this application has been tested on BlueWaters supercomputer at the National Center for Supercomputing Applications (NCSA), Stampede supercomputer at the Texas Advanced Computing Center (TACC), and Trestles supercomputer at the San Diego Supercomputer Center (SDSC). This code can scale to 262K processor cores on BlueWaters with marginal communcation cost. For more details of the underlying techniques used to achieve desirable scalability of this code, please refer to the following publication:
