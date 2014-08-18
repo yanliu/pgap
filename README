@@ -12,7 +12,7 @@ make clean; make
 Please read Makefile for the changes you need to make first. You can make sequential version, parallel version, and Intel Phi MIC version of the code by selecting different compiling options. The default compiling option is parallel and non-blocking.
 
 [Data]
-Input data must conform OR-LIB GAP format. GAP prolbem instance data can be obtained from OR-LIB:
+Input data must conform OR-LIB GAP format. GAP problem instance data can be obtained from OR-LIB:
 Small instances: http://people.brunel.ac.uk/~mastjjb/jeb/orlib/gapinfo.html
 Large instances: http://www.al.cm.is.nagoya-u.ac.jp/~yagiura/gap/
 
