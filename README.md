@@ -31,7 +31,9 @@ mpirun -np 4 ga-async -s b -r u -i c -p 200 -t t 300 -e -l jobname -f /path/to/d
 
 Depending on the configuration of underlying cluster interconnect, non-blocking communcation may or may not be stable. If you run this code using mvapich2, you are advised to increase the MV2_HYBRID_ENABLE_THRESHOLD by inserting the following statement into the command line:
 
-```MV2_HYBRID_ENABLE_THRESHOLD=2048```
+```
+MV2_HYBRID_ENABLE_THRESHOLD=2048
+```
 
 ## Results
 Every process outputs its solutions and logging info to a file. Final best solution is output the end of process output file.
