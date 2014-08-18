@@ -6,6 +6,10 @@ This is a PGA application that uses MPI non-blocking functions for migrating sol
 
 "Yan Y. Liu, Shaowen Wang, A scalable parallel genetic algorithm for the Generalized Assignment Problem, Parallel Computing, http://dx.doi.org/10.1016/j.parco.2014.04.008, 2014."
 
+[Dependency]
+- MPI: OpenMPI/MPICH/MVAPICH2/Cray MPI
+- SPRNG: a parallel random number generator (http://www.sprng.org/). Environment variable $SPRNG_HOME must be set to the path to sprng. sprng must be compiled with MPI support.
+
 [Compile]
 make clean; make
 
